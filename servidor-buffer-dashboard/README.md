@@ -48,6 +48,16 @@ $$f(t, q) = \lambda_0 - \alpha \cdot q(t)$$
 Comparando la solución analítica con la numérica y reportando el **error máximo absoluto**:
 $$E_{\max} = \max_{0 \le t \le t_{\max}} |q_{\text{analítico}}(t) - q_{\text{RK4}}(t)| \approx 10^{-5} \text{ req}$$
 
+### 6. Verificación Simbólica en Python (SymPy vía Pyodide / WebAssembly)
+Para una **triple verificación cruzada completamente independiente**, la aplicación ejecuta Python 3.12 real en el navegador usando **Pyodide** y la biblioteca **SymPy**:
+```python
+# Resolución simbólica directa en el navegador
+edo = sp.Eq(q(t).diff(t) + alpha*q(t), lam0)
+solucion = sp.dsolve(edo, q(t), ics={q(0): q0})
+q_t_simbolico = sp.simplify(solucion.rhs)
+```
+Validando que la expresión simbólica y los límites asintóticos ($q_{ss}$ y $q(t_s)$) coinciden exactamente con el desarrollo manual de Laplace.
+
 ---
 
 ## 🚀 Características del Dashboard

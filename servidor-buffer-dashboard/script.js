@@ -476,6 +476,13 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.kpiMpeak.innerHTML = `${Math.round(metrics.m_peak).toLocaleString()} <span class="kpi-unit">MB</span>`;
     dom.kpiMpeakGb.innerText = `(${(metrics.m_peak / 1024).toFixed(2)} GB)`;
 
+    // Actualizar referencias en la tarjeta de Python
+    if (pyDom.jsValQss) pyDom.jsValQss.innerText = `${Math.round(metrics.q_ss).toLocaleString()} req`;
+    if (pyDom.jsValTs) {
+      const qAtTs = calculateAnalyticQueue(metrics.t_s, lambda, alpha, q0);
+      pyDom.jsValTs.innerText = `${qAtTs.toFixed(2)} req`;
+    }
+
     // KPI RK4 Error
     dom.kpiRk4Error.innerHTML = `${maxRk4Error.toExponential(2)} <span class="kpi-unit">req</span>`;
 
@@ -789,7 +796,154 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --------------------------------------------------------------------------
-  // 10. TOUR INTERACTIVO / TUTORIAL GUIADO (HUD NO INTRUSIVO)
+  // 10. VERIFICACIÓN SIMBÓLICA EN PYTHON (SYMPY VIA PYODIDE)
+  // --------------------------------------------------------------------------
+  let pyodideInstance = null;
+  let isPyodideLoading = false;
+
+  const pyDom = {
+    btnRun: document.getElementById('btn-run-python'),
+    loadingBar: document.getElementById('python-loading-bar'),
+    loadingText: document.getElementById('py-loading-text'),
+    statusTag: document.getElementById('py-status-tag'),
+    execTime: document.getElementById('py-exec-time'),
+    formulaOut: document.getElementById('py-formula-out'),
+    valQss: document.getElementById('py-val-qss'),
+    valTs: document.getElementById('py-val-ts'),
+    jsValQss: document.getElementById('js-val-qss'),
+    jsValTs: document.getElementById('js-val-ts'),
+    matchBanner: document.getElementById('py-match-banner'),
+    matchMsg: document.getElementById('py-match-msg'),
+    btnCopyPy: document.getElementById('btn-copy-py'),
+    codeDisplay: document.getElementById('py-code-display')
+  };
+
+  async function runPythonVerification() {
+    if (isPyodideLoading) return;
+
+    pyDom.btnRun.disabled = true;
+    pyDom.loadingBar.style.display = 'flex';
+    pyDom.matchBanner.className = 'py-match-banner';
+    pyDom.matchMsg.innerText = 'Ejecutando script de SymPy en WebAssembly...';
+
+    const startTime = performance.now();
+
+    try {
+      // 1. Inicializar Pyodide y SymPy la primera vez
+      if (!pyodideInstance) {
+        pyDom.loadingText.innerText = 'Inicializando Pyodide (Python 3.12 WebAssembly)...';
+        pyDom.statusTag.innerText = 'Cargando Pyodide...';
+        pyodideInstance = await loadPyodide();
+
+        pyDom.loadingText.innerText = 'Descargando paquete SymPy (~5 MB por única vez)...';
+        pyDom.statusTag.innerText = 'Instalando SymPy...';
+        await pyodideInstance.loadPackage('sympy');
+      }
+
+      pyDom.statusTag.innerText = 'Python 3.12 + SymPy (Activo)';
+      pyDom.loadingText.innerText = 'Resolviendo EDO simbólicamente con SymPy dsolve...';
+
+      // 2. Parámetros actuales para sustitución
+      const lambdaVal = state.lambda;
+      const alphaVal = state.alpha;
+      const q0Val = state.q0;
+      const tsVal = (4 / state.alpha);
+
+      // 3. Código Python a ejecutar
+      const pythonScript = `
+import sympy as sp
+import json
+
+# Símbolos y función
+t, alpha, lam0, q0 = sp.symbols('t alpha lambda0 q0', positive=True)
+q = sp.Function('q')
+
+# EDO: dq/dt + alpha*q = lam0 con condición inicial q(0) = q0
+edo = sp.Eq(q(t).diff(t) + alpha*q(t), lam0)
+
+# Resolución simbólica directa e independiente
+solucion = sp.dsolve(edo, q(t), ics={q(0): q0})
+q_t_simbolico = sp.simplify(solucion.rhs)
+
+# Sustitución de valores numéricos del caso de estudio
+valores = {lam0: ${lambdaVal}, alpha: sp.Rational(${Math.round(alphaVal * 100)}, 100), q0: ${q0Val}}
+q_t_numerico = q_t_simbolico.subs(valores)
+q_t_lambda = sp.lambdify(t, q_t_numerico, 'numpy')
+
+# Evaluación en régimen permanente (t -> oo) y en t = t_s (98%)
+q_ss_calc = sp.limit(q_t_numerico, t, sp.oo)
+q_ts_calc = q_t_lambda(${tsVal.toFixed(4)})
+
+res = json.dumps({
+    "q_t_str": str(q_t_simbolico),
+    "q_t_latex": sp.latex(q_t_simbolico),
+    "q_ss": float(q_ss_calc),
+    "q_ts": float(q_ts_calc)
+})
+res
+`;
+
+      const rawResult = await pyodideInstance.runPythonAsync(pythonScript);
+      const res = JSON.parse(rawResult);
+
+      const endTime = performance.now();
+      const elapsedMs = Math.round(endTime - startTime);
+      pyDom.execTime.innerText = `${elapsedMs} ms`;
+
+      // 4. Mostrar resultados simbólicos en LaTeX
+      pyDom.formulaOut.innerHTML = `$$q(t) = ${res.q_t_latex}$$`;
+
+      // 5. Comparar valores numéricos
+      const jsQss = state.lambda / state.alpha;
+      const jsQts = calculateAnalyticQueue(tsVal, state.lambda, state.alpha, state.q0);
+
+      pyDom.valQss.innerText = `${Math.round(res.q_ss).toLocaleString()} req`;
+      pyDom.valTs.innerText = `${res.q_ts.toFixed(2)} req`;
+      pyDom.jsValQss.innerText = `${Math.round(jsQss).toLocaleString()} req`;
+      pyDom.jsValTs.innerText = `${jsQts.toFixed(2)} req`;
+
+      const diffQss = Math.abs(res.q_ss - jsQss);
+      const diffTs = Math.abs(res.q_ts - jsQts);
+
+      if (diffQss < 0.05 && diffTs < 0.05) {
+        pyDom.matchBanner.className = 'py-match-banner success';
+        pyDom.matchMsg.innerHTML = `✓ <strong>Verificación exitosa:</strong> SymPy (Python) resolvió $q(t)$ simbólicamente y coincide al 100% con la solución de Laplace y JavaScript.`;
+      } else {
+        pyDom.matchBanner.className = 'py-match-banner';
+        pyDom.matchMsg.innerText = `Solución ejecutada. Diferencia de orden: ${(diffQss + diffTs).toExponential(2)}`;
+      }
+
+      renderKaTeX();
+
+    } catch (err) {
+      console.error('Error al ejecutar Pyodide:', err);
+      pyDom.statusTag.innerText = 'Error en Python';
+      pyDom.matchBanner.className = 'py-match-banner';
+      pyDom.matchMsg.innerText = `Error al ejecutar SymPy: ${err.message || err}`;
+    } finally {
+      pyDom.btnRun.disabled = false;
+      pyDom.loadingBar.style.display = 'none';
+    }
+  }
+
+  function initPythonSection() {
+    if (!pyDom.btnRun) return;
+
+    pyDom.btnRun.addEventListener('click', runPythonVerification);
+
+    if (pyDom.btnCopyPy) {
+      pyDom.btnCopyPy.addEventListener('click', () => {
+        const codeText = pyDom.codeDisplay.innerText;
+        navigator.clipboard.writeText(codeText).then(() => {
+          pyDom.btnCopyPy.innerText = '✓ ¡Copiado!';
+          setTimeout(() => { pyDom.btnCopyPy.innerText = '📋 Copiar'; }, 2000);
+        });
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 11. TOUR INTERACTIVO / TUTORIAL GUIADO (HUD NO INTRUSIVO)
   // --------------------------------------------------------------------------
   const tourSteps = [
     {
@@ -823,8 +977,14 @@ document.addEventListener('DOMContentLoaded', () => {
       hint: 'Pasa el cursor sobre las curvas para ver los valores exactos en cada segundo.'
     },
     {
+      target: '#python-verification-card',
+      title: '6. 🐍 Verificación Simbólica en Python (SymPy)',
+      body: 'Ejecuta Python real con SymPy vía WebAssembly/Pyodide directamente en tu navegador para resolver la EDO simbólicamente de forma independiente.',
+      hint: 'Haz clic en "▶ Ejecutar Verificación en Python" para resolver la ecuación con SymPy.'
+    },
+    {
       target: '.math-section',
-      title: '6. 📐 Desarrollo Matemático y Guía de Uso',
+      title: '7. 📐 Desarrollo Matemático y Guía de Uso',
       body: 'Sección formal con fórmulas LaTeX (KaTeX): deducción de la EDO, transformada Q(s), fracciones parciales, regla práctica 4τ, algoritmo RK4, teoremas de límites y guía rápida.',
       hint: 'Haz clic en las pestañas para explorar cada demostración paso a paso.'
     }
@@ -926,11 +1086,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --------------------------------------------------------------------------
-  // 11. INICIALIZACIÓN DE LA APLICACIÓN
+  // 12. INICIALIZACIÓN DE LA APLICACIÓN
   // --------------------------------------------------------------------------
   initCharts();
   initControls();
   initMathTabs();
+  initPythonSection();
   initTour();
   updateDashboard();
 
