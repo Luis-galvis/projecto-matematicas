@@ -469,10 +469,12 @@ document.addEventListener('DOMContentLoaded', () => {
                   display: true,
                   content: 'M_peak = 5,024 MB',
                   position: 'end',
-                yMin: 5024,
-                yMax: 8192,
-                backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                borderColor: 'transparent'
+                  backgroundColor: 'rgba(5, 150, 105, 0.95)',
+                  color: '#ffffff',
+                  borderRadius: 6,
+                  padding: 5,
+                  font: { family: "'JetBrains Mono', monospace", size: 11, weight: 'bold' }
+                }
               }
             }
           }
