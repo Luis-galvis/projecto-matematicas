@@ -209,6 +209,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctxQueue = document.getElementById('chart-queue').getContext('2d');
     const ctxRAM = document.getElementById('chart-ram').getContext('2d');
 
+    // Funciones helper para crear gradientes dinámicos
+    function createQueueGradient(ctx) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 340);
+      gradient.addColorStop(0, 'rgba(6, 182, 212, 0.4)');
+      gradient.addColorStop(0.6, 'rgba(6, 182, 212, 0.12)');
+      gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+      return gradient;
+    }
+
+    function createRamGradient(ctx) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 340);
+      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.42)');
+      gradient.addColorStop(0.6, 'rgba(16, 185, 129, 0.12)');
+      gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+      return gradient;
+    }
+
     const commonChartOptions = {
       responsive: true,
       maintainAspectRatio: false,
@@ -220,16 +237,17 @@ document.addEventListener('DOMContentLoaded', () => {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#1e293b',
-          titleColor: '#f8fafc',
-          bodyColor: '#cbd5e1',
-          borderColor: '#334155',
-          borderWidth: 1,
-          padding: 10,
-          boxPadding: 4,
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#38bdf8',
+          bodyColor: '#f8fafc',
+          borderColor: '#06b6d4',
+          borderWidth: 1.5,
+          padding: 12,
+          boxPadding: 6,
+          cornerRadius: 8,
           usePointStyle: true,
           callbacks: {
-            title: (items) => `Tiempo t = ${Number(items[0].parsed.x).toFixed(2)} s`
+            title: (items) => `⏱️ Tiempo t = ${Number(items[0].parsed.x).toFixed(2)} s`
           }
         }
       },
@@ -241,15 +259,23 @@ document.addEventListener('DOMContentLoaded', () => {
             display: true,
             text: 'Tiempo t [segundos]',
             color: '#94a3b8',
-            font: { family: "'Inter', sans-serif", size: 12, weight: 600 }
+            font: { family: "'Inter', sans-serif", size: 12, weight: 700 }
           },
-          grid: { color: 'rgba(51, 65, 85, 0.35)' },
-          ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" } }
+          grid: {
+            color: 'rgba(51, 65, 85, 0.22)',
+            borderDash: [3, 4],
+            drawTicks: false
+          },
+          ticks: { color: '#94a3b8', font: { family: "'JetBrains Mono', monospace", size: 11 } }
         },
         y: {
           min: 0,
-          grid: { color: 'rgba(51, 65, 85, 0.35)' },
-          ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" } }
+          grid: {
+            color: 'rgba(51, 65, 85, 0.25)',
+            borderDash: [3, 4],
+            drawTicks: false
+          },
+          ticks: { color: '#94a3b8', font: { family: "'JetBrains Mono', monospace", size: 11 } }
         }
       }
     };
@@ -260,34 +286,41 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'Solución Analítica q(t)',
+            label: 'Solución Analítica q(t) [Laplace]',
             data: [],
             borderColor: '#06b6d4',
-            backgroundColor: 'rgba(6, 182, 212, 0.12)',
-            borderWidth: 2.5,
+            backgroundColor: createQueueGradient(ctxQueue),
+            borderWidth: 3.5,
             fill: true,
-            tension: 0.1,
-            pointRadius: 0
+            tension: 0.2,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#38bdf8',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2
           },
           {
             label: 'Verificación Numérica [RK4]',
             data: [],
             borderColor: '#c084fc',
-            borderWidth: 1.5,
+            borderWidth: 1.8,
             borderDash: [4, 4],
-            pointRadius: 1.5,
-            pointHoverRadius: 4,
+            pointRadius: 2,
+            pointHoverRadius: 5,
             pointBackgroundColor: '#c084fc',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 1,
             fill: false,
             tension: 0
           },
           {
-            label: 'Tiempo Actual (Simulación)',
+            label: 'Posición de Simulación Actual',
             data: [],
             borderColor: '#ffffff',
             backgroundColor: '#06b6d4',
-            pointRadius: 6,
-            pointHoverRadius: 8,
+            pointRadius: 7,
+            pointHoverRadius: 9,
+            pointBorderWidth: 2,
             showLine: false
           }
         ]
@@ -301,8 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: {
               display: true,
               text: 'Peticiones en Cola q(t) [req]',
-              color: '#06b6d4',
-              font: { family: "'Inter', sans-serif", size: 12, weight: 600 }
+              color: '#38bdf8',
+              font: { family: "'Inter', sans-serif", size: 12, weight: 700 }
             }
           }
         },
@@ -315,14 +348,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 scaleID: 'y',
                 value: 1000,
                 borderColor: '#f59e0b',
-                borderWidth: 2,
-                borderDash: [6, 6],
+                borderWidth: 2.2,
+                borderDash: [6, 4],
                 label: {
                   display: true,
                   content: 'q_ss = 1,000 req',
                   position: 'end',
-                  backgroundColor: 'rgba(245, 158, 11, 0.9)',
+                  backgroundColor: 'rgba(217, 119, 6, 0.95)',
                   color: '#ffffff',
+                  borderRadius: 6,
+                  padding: 5,
                   font: { family: "'JetBrains Mono', monospace", size: 11, weight: 'bold' }
                 }
               },
@@ -331,14 +366,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 scaleID: 'x',
                 value: 8.0,
                 borderColor: '#38bdf8',
-                borderWidth: 2,
-                borderDash: [4, 4],
+                borderWidth: 2.2,
+                borderDash: [5, 4],
                 label: {
                   display: true,
                   content: 't_s = 4τ = 8.00s (98%)',
                   position: 'start',
-                  backgroundColor: 'rgba(14, 165, 233, 0.9)',
+                  backgroundColor: 'rgba(2, 132, 199, 0.95)',
                   color: '#ffffff',
+                  borderRadius: 6,
+                  padding: 5,
                   font: { family: "'JetBrains Mono', monospace", size: 11, weight: 'bold' }
                 }
               }
@@ -354,22 +391,27 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'Consumo RAM M(t)',
+            label: 'Consumo de RAM M(t)',
             data: [],
             borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-            borderWidth: 2.5,
+            backgroundColor: createRamGradient(ctxRAM),
+            borderWidth: 3.5,
             fill: true,
-            tension: 0.1,
-            pointRadius: 0
+            tension: 0.2,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#34d399',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2
           },
           {
-            label: 'Punto Actual RAM',
+            label: 'Posición de Simulación Actual',
             data: [],
             borderColor: '#ffffff',
             backgroundColor: '#10b981',
-            pointRadius: 6,
-            pointHoverRadius: 8,
+            pointRadius: 7,
+            pointHoverRadius: 9,
+            pointBorderWidth: 2,
             showLine: false
           }
         ]
@@ -383,8 +425,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: {
               display: true,
               text: 'Memoria RAM M(t) [MB]',
-              color: '#10b981',
-              font: { family: "'Inter', sans-serif", size: 12, weight: 600 }
+              color: '#34d399',
+              font: { family: "'Inter', sans-serif", size: 12, weight: 700 }
             }
           }
         },
@@ -392,6 +434,13 @@ document.addEventListener('DOMContentLoaded', () => {
           ...commonChartOptions.plugins,
           annotation: {
             annotations: {
+              boxMargin: {
+                type: 'box',
+                yMin: 5024,
+                yMax: 8192,
+                backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                borderWidth: 0
+              },
               lineMmax: {
                 type: 'line',
                 scaleID: 'y',
@@ -402,8 +451,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   display: true,
                   content: 'LÍMITE FÍSICO M_max = 8,192 MB',
                   position: 'start',
-                  backgroundColor: 'rgba(239, 68, 68, 0.92)',
+                  backgroundColor: 'rgba(220, 38, 38, 0.95)',
                   color: '#ffffff',
+                  borderRadius: 6,
+                  padding: 5,
                   font: { family: "'JetBrains Mono', monospace", size: 11, weight: 'bold' }
                 }
               },
@@ -412,20 +463,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 scaleID: 'y',
                 value: 5024,
                 borderColor: '#10b981',
-                borderWidth: 2,
-                borderDash: [6, 6],
+                borderWidth: 2.2,
+                borderDash: [6, 4],
                 label: {
                   display: true,
                   content: 'M_peak = 5,024 MB',
                   position: 'end',
-                  backgroundColor: 'rgba(16, 185, 129, 0.9)',
-                  color: '#ffffff',
-                  font: { family: "'JetBrains Mono', monospace", size: 11, weight: 'bold' }
-                }
-              },
-              boxSafetyMargin: {
-                type: 'box',
-                yScaleID: 'y',
                 yMin: 5024,
                 yMax: 8192,
                 backgroundColor: 'rgba(16, 185, 129, 0.08)',
