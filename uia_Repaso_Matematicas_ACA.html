@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Guía de Repaso Matemático - ACA Matemáticas Especiales</title>
+    <!-- Motor de renderizado matemático MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.65;
+            color: #2c3e50;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 30px 15px;
+        }
+
+        .container {
+            max-width: 880px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 45px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            color: #1e3a8a;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 12px;
+            font-size: 26px;
+        }
+
+        h2 {
+            color: #1e40af;
+            margin-top: 32px;
+            font-size: 19px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 10px;
+        }
+
+        .card {
+            background: #f1f5f9;
+            border-left: 4px solid #0284c7;
+            padding: 14px 18px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .formula-box {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 18px 0;
+            font-size: 17px;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #0369a1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #cbd5e1;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e2e8f0;
+            color: #0f172a;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #38bdf8;
+            padding: 14px;
+            border-radius: 6px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Guía Técnica de Repaso: Modelado Dinámico y Matemáticas Especiales</h1>
+        <p><strong>Tema:</strong> Modelado y Control de Tráfico en un Servidor Web ante Picos de Peticiones mediante EDO
+            y Transformada de Laplace.<br>
+            <strong>Asignatura:</strong> Matemáticas Especiales — CUN (2026)
+        </p>
+
+        <h2>1. La Aproximación de Fluido (¿Por qué una EDO si las peticiones son discretas?)</h2>
+        <p>En la realidad, las peticiones HTTP llegan como unidades discretas ($1, 2, 3\dots$). No obstante, cuando la
+            concurrencia es masiva ($\lambda_0 = 500\text{ req/s}$), modelar cada paquete individual requiere teoría de
+            colas estocástica compleja (Cadenas de Markov).</p>
+        <div class="card">
+            <p><strong>Aproximación de Flujo Continuo:</strong> Se modela el servidor como un tanque de fluido. La
+                variable continua \(q(t)\) representa el nivel o volumen promedio acumulado de solicitudes retenidas en
+                memoria en el instante \(t\).</p>
+        </div>
+
+        <h2>2. Desglose Anatómico de la Ecuación Diferencial</h2>
+        <div class="formula-box">
+            $$\frac{dq(t)}{dt} + \alpha q(t) = \lambda_0 \cdot u(t)$$
+        </div>
+        <ul>
+            <li><strong>\(\frac{dq(t)}{dt}\) (Tasa neta de cambio):</strong> Rapidez con la que se llena o vacía el
+                buffer del servidor en \(\text{req/s}\). Si \(\frac{dq}{dt} = 0\), el sistema ha alcanzado el
+                equilibrio.</li>
+            <li><strong>\(u(t)\) (Escalón Unitario de Heaviside):</strong> Modela el evento de tráfico en \(t=0\). Vale
+                \(0\) para \(t < 0\) y \(1\) para \(t \ge 0\).</li>
+            <li><strong>\(\alpha q(t)\) (Drenaje con retroalimentación negativa):</strong> Tasa de procesamiento del
+                servidor (\(\alpha = 0.5\text{ s}^{-1}\)). A mayor número de peticiones en cola, más hilos de CPU
+                (threads) se asignan dinámicamente para procesarlas.</li>
+            <li><strong>Signo positivo al agrupar (\(+\alpha q\)):</strong> Representa la fuerza restauradora/disipativa
+                que estabiliza el servidor e impide el desbordamiento infinito.</li>
+        </ul>
+
+        <h2>3. Justificación de la Transformada de Laplace</h2>
+        <ul>
+            <li><strong>Conversión Operacional:</strong> Convierte ecuaciones diferenciales en operaciones algebraicas
+                simples en el dominio complejo \(s\).</li>
+            <li><strong>Tratamiento de Discontinuidades:</strong> Maneja de forma directa funciones escalonadas o
+                discontinuas como \(u(t) \xrightarrow{\mathcal{L}} \frac{1}{s}\).</li>
+            <li><strong>Inclusión Automática de Condiciones Iniciales:</strong> Por propiedad de la derivada:
+                $$\mathcal{L}\left\{\frac{dq}{dt}\right\} = sQ(s) - q(0)$$
+                Se introduce la condición inicial \(q(0) = 0\) de manera directa en el desarrollo algebraico.
+            </li>
+        </ul>
+
+        <h2>4. Frecuencia Compleja \(s\) y Estabilidad de Polos</h2>
+        <p>Al despejar la respuesta en el plano \(s\):</p>
+        <div class="formula-box">
+            $$Q(s) = \frac{\lambda_0}{s(s + \alpha)}$$
+        </div>
+        <ul>
+            <li><strong>Polo en \(s = 0\):</strong> Determinado por la entrada constante \(\lambda_0\). Define la
+                respuesta en estado estacionario a largo plazo.</li>
+            <li><strong>Polo propio en \(s = -\alpha = -0.5\):</strong> Al tener parte real estrictamente negativa
+                (\(\text{Re}(s) < 0\), semiplano complejo izquierdo), garantiza que el sistema es <span
+                    class="highlight">asintóticamente estable (BIBO)</span>.</li>
+        </ul>
+
+        <h2>5. Descomposición en Fracciones Parciales</h2>
+        <p>Para poder antitransformar por tablas directas, separamos en dos modos dinámicos:</p>
+        <div class="formula-box">
+            $$Q(s) = \frac{1000}{s} - \frac{1000}{s + 0.5}$$
+        </div>
+        <ul>
+            <li>\(\frac{1000}{s} \xrightarrow{\mathcal{L}^{-1}} 1000\): <strong>Respuesta forzada</strong> o valor de
+                equilibrio permanente.</li>
+            <li>\(-\frac{1000}{s + 0.5} \xrightarrow{\mathcal{L}^{-1}} -1000e^{-0.5t}\): <strong>Respuesta natural o
+                    transitoria</strong>, la cual se extingue exponencialmente en el tiempo.</li>
+        </ul>
+
+        <h2>6. Respuesta Temporal Analítica</h2>
+        <div class="formula-box">
+            $$q(t) = 1000\left(1 - e^{-0.5t}\right) \quad [\text{req}]$$
+        </div>
+        <pre>
+Peticiones q(t)
+ 1000 req |--------------------------------- (Estado Estacionario Asintótico)
+          |                       . - - - '
+          |                . - '  (982 req a los 8s -> 98.2%)
+          |          . - '
+          |     . - '
+    0 req |---'-----------------------------> Tiempo t (segundos)
+             t=0s       t=2s (τ)     t=8s (4τ)
+  </pre>
+
+        <h2>7. Constante de Tiempo \(\tau\) y Criterio del 98%</h2>
+        <ul>
+            <li><strong>Constante de tiempo:</strong> \(\tau = \frac{1}{\alpha} = \frac{1}{0.5} = 2.0\text{ s}\).
+                (Tiempo para alcanzar el \(63.2\%\) de la cola).</li>
+            <li><strong>Tiempo de estabilización práctica (\(4\tau\)):</strong>
+                $$t_s = 4\tau = 4(2\text{ s}) = 8.0\text{ s}$$
+                $$q(8) = 1000\left(1 - e^{-0.5(8)}\right) = 1000\left(1 - e^{-4}\right) = 981.7\text{ req } (98.17\%)$$
+            </li>
+        </ul>
+
+        <h2>8. Comprobación mediante Teoremas de Laplace</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Teorema</th>
+                    <th>Fórmula en el dominio \(s\)</th>
+                    <th>Resultado</th>
+                    <th>Significado Físico</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Valor Inicial</strong></td>
+                    <td>\(\lim_{s \to \infty} sQ(s) = \lim_{s \to \infty} \frac{500}{s+0.5}\)</td>
+                    <td><strong>0 req</strong></td>
+                    <td>En el instante del impacto (\(t=0^+\)), no hay peticiones acumuladas en el buffer.</td>
+                </tr>
+                <tr>
+                    <td><strong>Valor Final</strong></td>
+                    <td>\(\lim_{s \to 0} sQ(s) = \lim_{s \to 0} \frac{500}{s+0.5}\)</td>
+                    <td><strong>1000 req</strong></td>
+                    <td>La cola máxima asintótica donde el drenaje iguala a la entrada (\(0.5 \times 1000 = 500\text{
+                        req/s}\)).</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>9. Dimensionamiento y Decisión de Capacidad en RAM</h2>
+        <div class="formula-box">
+            $$M(t) = M_{\text{base}} + m_r \cdot q(t) = 1024 + 4.0 \cdot q(t) \quad [\text{MB}]$$
+        </div>
+        <ul>
+            <li><strong>Consumo Pico:</strong> \(M_{\text{peak}} = 1024\text{ MB} + (4.0\text{ MB/req} \times 1000\text{
+                req}) = 5024\text{ MB}\) (\(4.91\text{ GB}\)).</li>
+            <li><strong>Diagnóstico de Servidor (8 GB RAM):</strong> El servidor <strong>no colapsa</strong>. Retiene un
+                margen de seguridad de \(3168\text{ MB}\) (\(3.09\text{ GB}\) libres, equivalente al \(38.7\%\)).</li>
+            <li><strong>Umbral Crítico:</strong> Si la máquina tuviera solo \(4\text{ GB}\) (\(4096\text{ MB}\)), la
+                memoria se agotaría en \(t \approx 3.46\text{ s}\), activando el <em>Out-Of-Memory Killer</em> del
+                kernel de Linux.</li>
+        </ul>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Simulación: Modelo de Cola de Peticiones con Laplace | Nginx / Node.js</title>
+  <meta name="description" content="Simulación y verificación matemática de un cluster de servidores web bajo tráfico súbito mediante EDO, Transformada de Laplace y Runge-Kutta 4.">
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+  <!-- Chart.js & Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+  <!-- KaTeX JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header Bar -->
+    <header class="header-bar">
+      <div class="header-left">
+        <div class="server-status-dot pulse-active" id="global-status-dot"></div>
+        <div>
+          <h1 class="header-title">SERVER CLUSTER MONITOR <span class="badge-tag">LAPLACE MODEL</span></h1>
+          <p class="header-subtitle">Simulador de Cola de Peticiones $q(t)$ y Consumo de Memoria RAM $M(t)$ | EDO & Transformada de Laplace</p>
+        </div>
+      </div>
+
+      <!-- Quick Preset Scenarios & Tutorial Button -->
+      <div class="scenario-presets">
+        <button type="button" class="btn-preset btn-preset-tutorial" id="btn-start-tour">
+          <span class="icon">🎓</span> Iniciar Tour Guiado
+        </button>
+        <span class="preset-label">Escenarios:</span>
+        <button type="button" class="btn-preset btn-preset-nominal" id="preset-nominal">
+          <span class="icon">🟢</span> Nominal (Seguro)
+        </button>
+        <button type="button" class="btn-preset btn-preset-crisis" id="preset-crisis">
+          <span class="icon">🚨</span> Escenario de Crisis
+        </button>
+        <button type="button" class="btn-preset btn-preset-opt" id="preset-optimized">
+          <span class="icon">⚡</span> Alta Concurrencia
+        </button>
+      </div>
+    </header>
+
+    <!-- Global KPI / Metrics Summary Ribbon -->
+    <section class="kpi-grid">
+      <!-- KPI: System Status -->
+      <div class="kpi-card status-card" id="card-status">
+        <div class="kpi-header">
+          <span class="kpi-title">ESTADO DEL SISTEMA</span>
+          <span class="kpi-icon" id="status-icon">🛡️</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-system-status">SISTEMA SEGURO</div>
+        <div class="kpi-subtext" id="kpi-status-sub">Margen de RAM adecuado</div>
+      </div>
+
+      <!-- KPI: Constante de tiempo tau -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">CONSTANTE DE TIEMPO ($\tau$)</span>
+          <span class="kpi-formula-tag">$\tau = 1/\alpha$</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-tau">2.00 <span class="kpi-unit">s</span></div>
+        <div class="kpi-subtext">Tiempo de respuesta inercial</div>
+      </div>
+
+      <!-- KPI: Cola Estacionaria q_ss -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">COLA ESTACIONARIA ($q_{ss}$)</span>
+          <span class="kpi-formula-tag">$q_{ss} = \lambda_0/\alpha$</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-qss">1,000 <span class="kpi-unit">req</span></div>
+        <div class="kpi-subtext">Límite asintótico de peticiones</div>
+      </div>
+
+      <!-- KPI: Tiempo al 98% (ts = 4 tau) -->
+      <div class="kpi-card highlight-card">
+        <div class="kpi-header">
+          <span class="kpi-title">TIEMPO AL 98% ($t_s$)</span>
+          <span class="kpi-formula-tag">$t_s = 4\tau = 4/\alpha$</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-ts">8.00 <span class="kpi-unit">s</span></div>
+        <div class="kpi-subtext">Criterio 4$\tau$ (Control de Sistemas)</div>
+      </div>
+
+      <!-- KPI: Memoria Pico M_peak -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">MEMORIA PICO ($M_{\text{peak}}$)</span>
+          <span class="kpi-formula-tag">$M_{\text{base}} + m_r \cdot q_{ss}$</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-mpeak">5,024 <span class="kpi-unit">MB</span></div>
+        <div class="kpi-subtext" id="kpi-mpeak-gb">(4.91 GB)</div>
+      </div>
+
+      <!-- KPI: Margen de Seguridad -->
+      <div class="kpi-card" id="card-safety-margin">
+        <div class="kpi-header">
+          <span class="kpi-title">MARGEN DE SEGURIDAD</span>
+          <span class="kpi-formula-tag">$M_{\text{max}} - M_{\text{peak}}$</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-safety-mb">+3,168 <span class="kpi-unit">MB</span></div>
+        <div class="kpi-subtext" id="kpi-safety-pct">38.7% de RAM física libre</div>
+      </div>
+
+      <!-- KPI: Verificación RK4 -->
+      <div class="kpi-card rk4-card">
+        <div class="kpi-header">
+          <span class="kpi-title">ERROR MÁX. RK4 vs ANALÍTICO</span>
+          <span class="kpi-formula-tag">$\max |q - q_{\text{RK4}}|$</span>
+        </div>
+        <div class="kpi-main-val" id="kpi-rk4-error">2.84e-5 <span class="kpi-unit">req</span></div>
+        <div class="kpi-subtext text-emerald">✓ Verificación numérica exacta</div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid (Left Controls | Right Charts & Math) -->
+    <div class="workspace-layout">
+      
+      <!-- LEFT SIDEBAR: PARAMETERS & LIVE SIMULATION -->
+      <aside class="sidebar-panel">
+        <div class="panel-section-header">
+          <h2><span class="header-icon">⚙️</span> Parámetros del Sistema</h2>
+          <button type="button" class="btn-text-reset" id="btn-reset-params" title="Restablecer valores por defecto">↺ Defaults</button>
+        </div>
+
+        <form id="params-form" class="params-form" onsubmit="event.preventDefault();">
+          
+          <!-- Param 1: lambda_0 -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-lambda" title="Tasa de llegada de peticiones en t >= 0">
+                $\lambda_0$ (Tasa de Llegada):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-lambda" min="50" max="4000" step="10" value="500">
+                <span class="unit">req/s</span>
+              </div>
+            </div>
+            <input type="range" id="param-lambda" min="50" max="4000" step="10" value="500">
+            <span class="slider-hint">Flujo entrante de peticiones en avalancha</span>
+          </div>
+
+          <!-- Param 2: alpha -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-alpha" title="Coeficiente de servicio/evacuación de peticiones">
+                $\alpha$ (Tasa de Servicio):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-alpha" min="0.05" max="3.0" step="0.05" value="0.5">
+                <span class="unit">s⁻¹</span>
+              </div>
+            </div>
+            <input type="range" id="param-alpha" min="0.05" max="3.0" step="0.05" value="0.5">
+            <span class="slider-hint">Capacidad de drenaje / procesamiento</span>
+          </div>
+
+          <!-- Param 3: q_0 -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-q0" title="Longitud inicial de la cola antes del pico">
+                $q_0$ (Cola Inicial):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-q0" min="0" max="1500" step="10" value="0">
+                <span class="unit">req</span>
+              </div>
+            </div>
+            <input type="range" id="param-q0" min="0" max="1500" step="10" value="0">
+            <span class="slider-hint">Peticiones acumuladas en $t = 0$</span>
+          </div>
+
+          <!-- Param 4: m_r -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-mr" title="Memoria RAM consumida en buffer por cada petición">
+                $m_r$ (RAM por Petición):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-mr" min="0.5" max="16.0" step="0.25" value="4.0">
+                <span class="unit">MB/req</span>
+              </div>
+            </div>
+            <input type="range" id="param-mr" min="0.5" max="16.0" step="0.25" value="4.0">
+            <span class="slider-hint">Huella de memoria del socket / buffer</span>
+          </div>
+
+          <!-- Param 5: M_base -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-mbase" title="Memoria base del Sistema Operativo y Runtime Node/Nginx">
+                $M_{\text{base}}$ (RAM Base):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-mbase" min="256" max="4096" step="128" value="1024">
+                <span class="unit">MB</span>
+              </div>
+            </div>
+            <input type="range" id="param-mbase" min="256" max="4096" step="128" value="1024">
+            <span class="slider-hint">Consumo estático del OS y servicios</span>
+          </div>
+
+          <!-- Param 6: M_max -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-mmax" title="Capacidad física total de RAM instalada en el host">
+                $M_{\text{max}}$ (RAM Total Host):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-mmax" min="1024" max="32768" step="512" value="8192">
+                <span class="unit">MB</span>
+              </div>
+            </div>
+            <input type="range" id="param-mmax" min="1024" max="32768" step="512" value="8192">
+            <span class="slider-hint">Límite físico de memoria antes de OOM Killer</span>
+          </div>
+
+          <!-- Param 7: t_max -->
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="param-tmax" title="Ventana temporal máxima del horizonte de simulación">
+                $t_{\text{max}}$ (Tiempo Máximo):
+              </label>
+              <div class="input-with-unit">
+                <input type="number" id="num-tmax" min="5" max="60" step="1" value="20">
+                <span class="unit">s</span>
+              </div>
+            </div>
+            <input type="range" id="param-tmax" min="5" max="60" step="1" value="20">
+            <span class="slider-hint">Ventana de observación en segundos</span>
+          </div>
+
+        </form>
+
+        <!-- Interactive Live Simulation Player / Gauge -->
+        <div class="sim-player-card">
+          <div class="sim-player-header">
+            <h3><span class="header-icon">⏱️</span> Simulación Animada</h3>
+            <span class="badge-time" id="live-time-display">t = 0.00 s</span>
+          </div>
+
+          <!-- Real-time Memory Gauge Bar -->
+          <div class="gauge-container">
+            <div class="gauge-labels">
+              <span>0 MB</span>
+              <span id="gauge-label-current">M(t): 1024 MB</span>
+              <span id="gauge-label-max">8192 MB</span>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="gauge-ram-fill" style="width: 12.5%;"></div>
+              <div class="gauge-limit-marker" id="gauge-limit-marker" title="Límite físico M_max"></div>
+            </div>
+            <div class="gauge-status-text" id="gauge-status-legend">Carga normal: 12.5% de RAM</div>
+          </div>
+
+          <!-- Playback Controls -->
+          <div class="playback-controls">
+            <button type="button" class="btn-play" id="btn-toggle-sim">
+              <span id="btn-play-icon">▶</span> <span id="btn-play-text">Iniciar Animación</span>
+            </button>
+            <button type="button" class="btn-reset" id="btn-reset-sim" title="Reiniciar animación a t = 0">
+              ⏮ Reset
+            </button>
+            <div class="speed-select-wrap">
+              <label for="select-speed">Velocidad:</label>
+              <select id="select-speed">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="2">2.0x</option>
+                <option value="4">4.0x</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- RIGHT MAIN CONTENT: CHARTS & MATHEMATICAL THEORY -->
+      <main class="main-content">
+        
+        <!-- SECTION 1: DUAL INTERACTIVE CHARTS -->
+        <div class="charts-container">
+          
+          <!-- Chart 1: Queue Length q(t) vs t -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Gráfica 1 — Longitud de la Cola $q(t)$ vs Tiempo $t$</h3>
+                <p class="chart-subtitle">Respuesta transitoria y verificación numérica Runge-Kutta 4 (RK4)</p>
+              </div>
+              <div class="chart-legend-custom">
+                <span class="legend-badge legend-analytic"><span class="legend-line line-solid"></span> Analítica $q(t)$</span>
+                <span class="legend-badge legend-rk4"><span class="legend-line line-dots"></span> RK4 Numérico</span>
+                <span class="legend-badge legend-asymptote"><span class="legend-line line-dashed"></span> $q_{ss}$</span>
+                <span class="legend-badge legend-ts"><span class="legend-line line-vert"></span> $t_s$ (98%)</span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="chart-queue"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: RAM Memory M(t) vs t -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 class="chart-title">Gráfica 2 — Consumo de Memoria RAM $M(t)$ vs Tiempo $t$</h3>
+                <p class="chart-subtitle">Evaluación de saturación física y margen de seguridad de hardware</p>
+              </div>
+              <div class="chart-legend-custom">
+                <span class="legend-badge legend-ram"><span class="legend-line line-ram"></span> RAM $M(t)$</span>
+                <span class="legend-badge legend-mmax"><span class="legend-line line-mmax"></span> Límite $M_{\text{max}}$</span>
+                <span class="legend-badge legend-mpeak"><span class="legend-line line-mpeak"></span> Asíntota $M_{\text{peak}}$</span>
+                <span class="legend-badge legend-zone"><span class="legend-box"></span> Margen Seguridad</span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="chart-ram"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- SECTION 2: MATHEMATICAL FOUNDATIONS & STEP-BY-STEP PROOFS -->
+        <section class="math-section">
+          <div class="math-header">
+            <div>
+              <h2 class="math-section-title">📐 Desarrollo Matemático y Verificación Formal</h2>
+              <p class="math-section-subtitle">Deducción analítica rigurosa mediante Transformada de Laplace y validación numérica RK4</p>
+            </div>
+            <div class="math-tabs">
+              <button type="button" class="math-tab active" data-tab="tab-edo">1. EDO & Laplace</button>
+              <button type="button" class="math-tab" data-tab="tab-metrics">2. Métricas y Regla 4$\tau$</button>
+              <button type="button" class="math-tab" data-tab="tab-rk4">3. Integración RK4</button>
+              <button type="button" class="math-tab" data-tab="tab-theorems">4. Teoremas de Límite</button>
+              <button type="button" class="math-tab" data-tab="tab-guide">5. 📖 Guía de Uso</button>
+            </div>
+          </div>
+
+          <div class="math-card">
+            
+            <!-- TAB 1: EDO & Laplace -->
+            <div class="math-tab-content active" id="tab-edo">
+              <div class="math-grid-2col">
+                <div class="math-box">
+                  <h4>Ecuación Diferencial Ordinaria (EDO)</h4>
+                  <p>Modelado del balance de flujo de peticiones en el buffer del servidor (con condición inicial $q(0) = q_0$):</p>
+                  <div class="latex-eq">
+                    $$\frac{dq(t)}{dt} + \alpha \cdot q(t) = \lambda_0 \cdot u(t), \quad q(0) = q_0$$
+                  </div>
+                  <p class="math-note">Donde $u(t)$ es la función escalón unitario de Heaviside que representa la llegada súbita de tráfico en $t \ge 0$.</p>
+                </div>
+
+                <div class="math-box">
+                  <h4>Transformada de Laplace</h4>
+                  <p>Aplicando la propiedad de linealidad y de la derivada $\mathcal{L}\{\frac{dq}{dt}\} = sQ(s) - q(0)$:</p>
+                  <div class="latex-eq">
+                    $$s Q(s) - q_0 + \alpha Q(s) = \frac{\lambda_0}{s}$$
+                  </div>
+                  <p>Despejando algebraicamente la transformada de la cola $Q(s)$:</p>
+                  <div class="latex-eq">
+                    $$Q(s) = \frac{\lambda_0}{s(s+\alpha)} + \frac{q_0}{s+\alpha}$$
+                  </div>
+                </div>
+              </div>
+
+              <div class="math-box full-width">
+                <h4>Transformada Inversa de Laplace $\mathcal{L}^{-1}\{Q(s)\}$ mediante Fracciones Parciales</h4>
+                <p>Descomponiendo el primer término en fracciones simples:</p>
+                <div class="latex-eq">
+                  $$\frac{\lambda_0}{s(s+\alpha)} = \frac{A}{s} + \frac{B}{s+\alpha} \implies A(s+\alpha) + Bs = \lambda_0 \implies A = \frac{\lambda_0}{\alpha}, \quad B = -\frac{\lambda_0}{\alpha}$$
+                </div>
+                <div class="latex-eq">
+                  $$Q(s) = \frac{\lambda_0}{\alpha} \left( \frac{1}{s} - \frac{1}{s+\alpha} \right) + \frac{q_0}{s+\alpha}$$
+                </div>
+                <p>Aplicando las transformadas inversas elementales $\mathcal{L}^{-1}\{\frac{1}{s}\} = 1$ y $\mathcal{L}^{-1}\{\frac{1}{s+\alpha}\} = e^{-\alpha t}$:</p>
+                <div class="latex-eq highlight-formula">
+                  $$q(t) = \frac{\lambda_0}{\alpha} \left( 1 - e^{-\alpha t} \right) + q_0 e^{-\alpha t}$$
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 2: Metrics & 4 tau rule -->
+            <div class="math-tab-content" id="tab-metrics">
+              <div class="math-grid-2col">
+                <div class="math-box">
+                  <h4>Modelo de Memoria RAM $M(t)$</h4>
+                  <p>El consumo total de RAM es la suma lineal del espacio base del sistema operativo más la memoria asignada a cada petición en el buffer:</p>
+                  <div class="latex-eq highlight-formula">
+                    $$M(t) = M_{\text{base}} + m_r \cdot q(t)$$
+                  </div>
+                  <p>En el límite estacionario $t \to \infty$:</p>
+                  <div class="latex-eq">
+                    $$M_{\text{peak}} = \lim_{t \to \infty} M(t) = M_{\text{base}} + m_r \cdot q_{ss} = M_{\text{base}} + m_r \left( \frac{\lambda_0}{\alpha} \right)$$
+                  </div>
+                </div>
+
+                <div class="math-box">
+                  <h4>Constante de Tiempo $\tau$ y Estado Estacionario $q_{ss}$</h4>
+                  <p>La constante de tiempo del sistema de primer orden caracteriza la rapidez de respuesta:</p>
+                  <div class="latex-eq">
+                    $$\tau = \frac{1}{\alpha} \quad [\text{s}], \qquad q_{ss} = \lim_{t\to\infty} q(t) = \frac{\lambda_0}{\alpha} \quad [\text{req}]$$
+                  </div>
+                  <p>Para $t = \tau$, la cola ha alcanzado exactamente el $(1 - e^{-1}) \approx 63.21\%$ de su valor asintótico.</p>
+                </div>
+              </div>
+
+              <div class="math-box full-width">
+                <h4>Tiempo de Establecimiento al 98% ($t_s = 4\tau$) — Criterio de Control de Sistemas</h4>
+                <p>En ingeniería de control e instrumentación, el tiempo de asentamiento al $98.2\%$ de un sistema de primer orden se define estándar mediante la regla práctica:</p>
+                <div class="latex-eq highlight-formula">
+                  $$t_s = 4\tau = \frac{4}{\alpha} \quad [\text{s}]$$
+                </div>
+                <p><strong>Demostración de concordancia:</strong> Evaluando la solución analítica para $t = 4\tau = 4/\alpha$ (asumiendo $q_0 = 0$):</p>
+                <div class="latex-eq">
+                  $$q(4/\alpha) = q_{ss} \left( 1 - e^{-\alpha(4/\alpha)} \right) = q_{ss} \left( 1 - e^{-4} \right) \approx q_{ss} (1 - 0.0183156) = 0.98168 \cdot q_{ss} \approx 98.2\% \cdot q_{ss}$$
+                </div>
+                <p class="math-note">Esta formulación $t_s = 4/\alpha$ es la implementada en este dashboard como métrica oficial y en la gráfica interactiva.</p>
+              </div>
+            </div>
+
+            <!-- TAB 3: RK4 Integrator -->
+            <div class="math-tab-content" id="tab-rk4">
+              <div class="math-box full-width">
+                <h4>Método Numérico de Runge-Kutta de 4to Orden (RK4)</h4>
+                <p>Para verificar que la solución analítica obtenida con Laplace no posee errores algebraicos ni de redondeo, el dashboard ejecuta un integrador numérico RK4 en tiempo de ejecución resolviendo $f(t, q) = \lambda_0 - \alpha q$:</p>
+                <div class="latex-eq">
+                  $$\frac{dq}{dt} = f(t, q) = \lambda_0 - \alpha \cdot q(t), \quad q(t_0) = q_0$$
+                </div>
+                <div class="math-grid-2col" style="margin-top: 15px;">
+                  <div class="math-subbox">
+                    <p><strong>Fórmulas de pendientes intermedias por paso $h = \Delta t$:</strong></p>
+                    <div class="latex-eq">
+                      $$\begin{aligned}
+                        k_1 &= f(t_n, q_n) = \lambda_0 - \alpha q_n \\
+                        k_2 &= f\left(t_n + \frac{h}{2}, q_n + \frac{h}{2}k_1\right) \\
+                        k_3 &= f\left(t_n + \frac{h}{2}, q_n + \frac{h}{2}k_2\right) \\
+                        k_4 &= f(t_n + h, q_n + h k_3)
+                      \end{aligned}$$
+                    </div>
+                  </div>
+                  <div class="math-subbox">
+                    <p><strong>Actualización del estado y cálculo de error:</strong></p>
+                    <div class="latex-eq">
+                      $$q_{n+1} = q_n + \frac{h}{6}(k_1 + 2k_2 + 2k_3 + k_4)$$
+                    </div>
+                    <div class="latex-eq highlight-formula">
+                      $$E_{\max} = \max_{0 \le t \le t_{\max}} \left| q_{\text{analítica}}(t) - q_{\text{RK4}}(t) \right|$$
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 4: Limit Theorems -->
+            <div class="math-tab-content" id="tab-theorems">
+              <div class="math-grid-2col">
+                <div class="math-box">
+                  <h4>Teorema del Valor Inicial (TVI)</h4>
+                  <p>Permite corroborar la condición de borde en $t = 0^+$ directamente en el dominio de Laplace $s$:</p>
+                  <div class="latex-eq">
+                    $$\lim_{t \to 0^+} q(t) = \lim_{s \to \infty} s Q(s)$$
+                  </div>
+                  <div class="latex-eq">
+                    $$\lim_{s \to \infty} s \cdot \left( \frac{\lambda_0}{s(s+\alpha)} + \frac{q_0}{s+\alpha} \right) = \lim_{s \to \infty} \left( \frac{\lambda_0}{s+\alpha} + \frac{s q_0}{s+\alpha} \right) = 0 + q_0 = q_0$$
+                  </div>
+                  <p class="math-note">✓ Coincide rigurosamente con la condición inicial física impuesta al sistema.</p>
+                </div>
+
+                <div class="math-box">
+                  <h4>Teorema del Valor Final (TVF)</h4>
+                  <p>Permite determinar el estado asintótico en régimen permanente $t \to \infty$ sin calcular la antitransformada:</p>
+                  <div class="latex-eq">
+                    $$\lim_{t \to \infty} q(t) = \lim_{s \to 0} s Q(s)$$
+                  </div>
+                  <div class="latex-eq">
+                    $$\lim_{s \to 0} s \cdot \left( \frac{\lambda_0}{s(s+\alpha)} + \frac{q_0}{s+\alpha} \right) = \lim_{s \to 0} \left( \frac{\lambda_0}{s+\alpha} + \frac{s q_0}{s+\alpha} \right) = \frac{\lambda_0}{\alpha} + 0 = \frac{\lambda_0}{\alpha}$$
+                  </div>
+                  <p class="math-note">✓ Demuestra que la cola se estabiliza exactamente en $q_{ss} = \lambda_0/\alpha$.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 5: Interactive Guide & Tutorial -->
+            <div class="math-tab-content" id="tab-guide">
+              <div class="math-grid-2col">
+                <div class="math-box">
+                  <h4>🕹️ 1. Controles y Parámetros del Servidor</h4>
+                  <ul class="guide-list">
+                    <li><strong>$\lambda_0$ (Tasa de Llegada):</strong> Cantidad de peticiones/segundo que entran súbitamente en $t \ge 0$. A mayor $\lambda_0$, mayor acumulación en cola.</li>
+                    <li><strong>$\alpha$ (Tasa de Servicio):</strong> Capacidad de procesamiento y drenaje del servidor ($s^{-1}$). Determina qué tan rápido evacúa peticiones.</li>
+                    <li><strong>$q_0$ (Cola Inicial):</strong> Peticiones acumuladas antes del pico en $t = 0$.</li>
+                    <li><strong>$m_r$ (RAM por Petición):</strong> Memoria en MB consumida por cada socket/buffer retenido.</li>
+                    <li><strong>$M_{\text{base}}$ y $M_{\text{max}}$:</strong> Memoria fija del SO y límite físico total de RAM del host.</li>
+                    <li><strong>$t_{\text{max}}$:</strong> Ventana de tiempo visualizada en las gráficas (5 a 60 segundos).</li>
+                  </ul>
+                </div>
+
+                <div class="math-box">
+                  <h4>📊 2. Interpretación de Gráficas y Métricas</h4>
+                  <ul class="guide-list">
+                    <li><strong>Gráfica 1 (Cola $q(t)$):</strong> Compara la solución analítica exacta de Laplace (cian) con la verificación numérica Runge-Kutta 4 (violeta). La línea punteada dorada muestra la asíntota $q_{ss}$ y la línea vertical azul muestra el tiempo al 98% ($t_s = 4\tau$).</li>
+                    <li><strong>Gráfica 2 (Memoria $M(t)$):</strong> Curva de consumo de RAM. La línea roja marca el límite $M_{\text{max}}$. La zona verde sombreada indica el margen de seguridad disponible.</li>
+                    <li><strong>Estado del Sistema:</strong> Muestra <span class="badge-status-safe">SISTEMA SEGURO</span> si $M_{\text{peak}} \le M_{\text{max}}$ o <span class="badge-status-danger">🚨 COLAPSO (OOM)</span> si la RAM es superada.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="math-box full-width">
+                <h4>🚀 3. Flujo de Demostración Recomendado para la Sustentación</h4>
+                <ol class="guide-steps">
+                  <li><strong>Paso 1:</strong> Haz clic en el botón <strong>"🟢 Nominal (Seguro)"</strong> para mostrar el punto de partida equilibrado ($\lambda_0 = 500, \alpha = 0.5 \implies M_{\text{peak}} = 5024\text{ MB} < 8192\text{ MB}$).</li>
+                  <li><strong>Paso 2:</strong> Haz clic en <strong>"▶ Iniciar Animación"</strong> en el panel de la izquierda para ver cómo el tiempo avanza de $t = 0$ a $t_{\text{max}}$, observando el llenado dinámico del medidor Gauge y el movimiento del cursor sobre ambas gráficas.</li>
+                  <li><strong>Paso 3:</strong> Haz clic en el botón <strong>"🚨 Escenario de Crisis"</strong> ($\lambda_0 = 2000$) para ilustrar el colapso por agotamiento de RAM ($M_{\text{peak}} = 17024\text{ MB} > 8192\text{ MB}$). Observa cómo la tarjeta de estado cambia a rojo, el margen se vuelve negativo y la gráfica sombrea el área de saturación.</li>
+                  <li><strong>Paso 4:</strong> Muestra la tarjeta <strong>"Error Máx. RK4 vs Analítico"</strong> ($< 10^{-5}$) y abre la pestaña <strong>"3. Integración RK4"</strong> para explicar la verificación matemática independiente.</li>
+                </ol>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- Footer Information -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <span>Matemáticas Especiales — Simulación de Sistemas Dinámicos y Transformada de Laplace</span>
+        <span>Modelado de Sistemas Nginx / Node.js • Cliente 100% Puro (HTML5/CSS3/JS)</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Floating Guided Tour HUD Card (Non-intrusive & Crystal Clear) -->
+  <aside class="tour-hud-container" id="tour-hud" aria-live="polite">
+    <div class="tour-hud-card">
+      <div class="tour-hud-top">
+        <div class="tour-hud-badge">
+          <span class="pulse-ring"></span>
+          <span id="tour-step-badge">Paso 1 de 6</span>
+        </div>
+        <button type="button" class="btn-tour-close" id="tour-btn-close" title="Cerrar tour">✕</button>
+      </div>
+
+      <h3 class="tour-hud-title" id="tour-title">1. Escenarios Rápidos Preconfigurados</h3>
+      <p class="tour-hud-body" id="tour-body">Descripción del paso del tutorial.</p>
+
+      <div class="tour-hud-hint" id="tour-hint">
+        💡 <strong>Tip:</strong> Puedes interactuar con la interfaz en cualquier momento.
+      </div>
+
+      <div class="tour-hud-bottom">
+        <div class="tour-indicators" id="tour-indicators">
+          <!-- Dots generated in JS -->
+        </div>
+        <div class="tour-actions">
+          <button type="button" class="btn-tour-prev" id="tour-btn-prev">Anterior</button>
+          <button type="button" class="btn-tour-next" id="tour-btn-next">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main JavaScript Logic -->
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Maestra de Repaso Matemático - ACA Matemáticas Especiales</title>
+
+    <!-- Configuración segura de MathJax para renderizado de LaTeX -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
+        };
+    </script>
+    <script id="MathJax-script" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #0284c7;
+            --accent: #d97706;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --code-bg: #0f172a;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 30px 15px;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 45px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            color: var(--primary);
+            border-bottom: 3px solid var(--secondary);
+            padding-bottom: 12px;
+            font-size: 26px;
+            margin-top: 0;
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-top: 36px;
+            font-size: 20px;
+            border-left: 5px solid var(--secondary);
+            padding-left: 12px;
+        }
+
+        h3 {
+            color: #334155;
+            font-size: 16px;
+            margin-top: 22px;
+        }
+
+        .meta-box {
+            background: #f1f5f9;
+            border-left: 4px solid var(--secondary);
+            padding: 12px 18px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+        }
+
+        .step-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-left: 4px solid #3b82f6;
+            padding: 18px;
+            margin: 18px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .formula-display {
+            background: var(--code-bg);
+            color: #f8fafc;
+            padding: 18px;
+            border-radius: 8px;
+            margin: 16px 0;
+            overflow-x: auto;
+            font-size: 16px;
+        }
+
+        .cancel {
+            text-decoration: line-through;
+            color: #ef4444;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14.5px;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        ul,
+        ol {
+            padding-left: 22px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+            }
+
+            .formula-display {
+                background: #f8fafc;
+                color: #000;
+                border: 1px solid #ccc;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Guía Maestra de Repaso y Deducción Matemática</h1>
+        <div class="meta-box">
+            <strong>Proyecto:</strong> Modelado y Control de Tráfico en Servidor Web ante Picos de Concurrencia.<br>
+            <strong>Asignatura:</strong> Matemáticas Especiales — CUN (2026).<br>
+            <strong>Propósito:</strong> Explicación paso a paso de todas las deducciones algebraicas, transformadas,
+            cancelaciones y teoremas para la sustentación del ACA.
+        </div>
+
+        <!-- SECCIÓN 1 -->
+        <h2>1. Fundamento Físico: Aproximación de Fluido Continuo</h2>
+        <p>En la realidad informática, las peticiones HTTP llegan como eventos discretos ($1, 2, 3\dots$). Sin embargo,
+            cuando la concurrencia es masiva ($\lambda_0 = 500\text{ req/s}$), modelar cada paquete individual requiere
+            teoría de colas estocástica compleja (cadenas de Markov de saltos puros).</p>
+        <div class="step-box">
+            <strong>¿Por qué una Ecuación Diferencial Ordinaria (EDO)?</strong><br>
+            Se aplica la <em>aproximación hidrodinámica o de fluido continuo</em>: tratamos el flujo de peticiones como
+            si fuera el llenado y vaciado continuo de un tanque de agua. La variable continua $q(t)$ representa el
+            volumen promedio acumulado de solicitudes retenidas en la memoria del servidor en el segundo $t$.
+        </div>
+
+        <!-- SECCIÓN 2 -->
+        <h2>2. Construcción Rigurosa de la Ecuación Diferencial</h2>
+        <p>El modelo parte del <strong>Principio Fundamental de Conservación de Masa / Flujo</strong>:</p>
+
+        $$\text{Tasa neta de cambio en la cola} = \text{Tasa de entrada} - \text{Tasa de salida (servicio)}$$
+
+        <p>Desglosando cada componente:</p>
+        <ul>
+            <li><strong>Tasa neta de cambio $\left(\frac{dq(t)}{dt}\right)$:</strong> Es la derivada temporal de $q(t)$.
+                Representa la velocidad instantánea con la que crece o decrece el encolamiento en unidades de
+                $[\text{req/s}]$.</li>
+            <li><strong>Tasa de entrada $\left(\lambda(t)\right)$</strong>: El pico sostenido se modela mediante la
+                función escalón unitario de Heaviside $u(t)$:
+                $$\lambda(t) = \lambda_0 \cdot u(t) = 500 \cdot u(t) \quad [\text{req/s}]$$
+                <em>¿Por qué $u(t)$?</em> Porque $u(t) = 0$ para $t < 0$ (servidor en reposo) y $u(t)=1$ para $t \ge 0$
+                    (inicio exacto del evento). </li>
+            <li><strong>Tasa de evacuación / servicio $\left(S(t)\right)$</strong>: Se modela con retroalimentación
+                negativa proporcional a la carga:
+                $$S(t) = \alpha \cdot q(t) \quad [\text{req/s}]$$
+                <em>¿Por qué depende de $q(t)$?</em> Porque a mayor cantidad de peticiones acumuladas en el buffer, el
+                despachador de hilos del servidor (thread pool de Linux/Nginx) asigna más núcleos y concurrencia para
+                drenarlas. El parámetro $\alpha = 0.5\text{ s}^{-1}$ es la constante de servicio.
+            </li>
+        </ul>
+
+        <p>Igualando los términos:</p>
+        <div class="formula-display">
+            $$\frac{dq(t)}{dt} = \lambda_0 u(t) - \alpha q(t)$$
+        </div>
+
+        <p><strong>Paso algebraico de normalización:</strong> Sumamos $\alpha q(t)$ a ambos lados de la igualdad
+            (propiedad aditiva de la igualdad) para obtener la forma estándar de una <em>EDO lineal de primer
+                orden</em>:</p>
+        <div class="formula-display">
+            $$\frac{dq(t)}{dt} + \alpha q(t) = \lambda_0 u(t), \quad \text{con condición inicial } q(0) = 0$$
+        </div>
+
+        <!-- SECCIÓN 3 -->
+        <h2>3. Aplicación y Deducción Paso a Paso de la Transformada de Laplace</h2>
+        <p>Aplicamos el operador integral $\mathcal{L}\{\cdot\} = \int_0^\infty e^{-st}(\cdot)dt$ a cada término de la
+            ecuación diferencial aprovechando la propiedad de linealidad:</p>
+
+        $$\mathcal{L}\left\{\frac{dq(t)}{dt}\right\} + \alpha \mathcal{L}\{q(t)\} = \lambda_0 \mathcal{L}\{u(t)\}$$
+
+        <div class="step-box">
+            <h3>¿De dónde sale la transformada de cada término?</h3>
+            <ol>
+                <li><strong>Transformada de la derivada:</strong> Por el teorema de integración por partes:
+                    $$\mathcal{L}\left\{\frac{dq}{dt}\right\} = \int_0^\infty e^{-st} q'(t) dt = \left[ e^{-st} q(t)
+                    \right]_0^\infty - \int_0^\infty (-s e^{-st}) q(t) dt = 0 - q(0) + s Q(s) = sQ(s) - q(0)$$
+                </li>
+                <li><strong>Transformada del escalón unitario:</strong>
+                    $$\mathcal{L}\{u(t)\} = \int_0^\infty e^{-st} (1) dt = \left[ -\frac{e^{-st}}{s} \right]_0^\infty =
+                    0 - \left(-\frac{1}{s}\right) = \frac{1}{s}$$
+                </li>
+            </ol>
+        </div>
+
+        <p>Sustituyendo estas identidades en la ecuación:</p>
+        $$sQ(s) - q(0) + \alpha Q(s) = \lambda_0 \left(\frac{1}{s}\right)$$
+
+        <p>Como el servidor arranca vacío antes del evento, sustituimos la condición inicial $q(0) = 0$:</p>
+        $$sQ(s) + \alpha Q(s) = \frac{\lambda_0}{s}$$
+
+        <p><strong>Factorización:</strong> Extraemos $Q(s)$ como factor común en el lado izquierdo:</p>
+        $$Q(s) \cdot (s + \alpha) = \frac{\lambda_0}{s}$$
+
+        <p><strong>Despeje:</strong> Dividimos ambos lados entre el binomio $(s + \alpha)$ (o multiplicamos por su
+            inverso $\frac{1}{s+\alpha}$):</p>
+        <div class="formula-display">
+            $$Q(s) = \frac{\lambda_0}{s(s + \alpha)}$$
+        </div>
+
+        <!-- SECCIÓN 4 -->
+        <h2>4. Descomposición en Fracciones Parciales (Paso a Paso)</h2>
+        <p>La expresión $\frac{\lambda_0}{s(s+\alpha)}$ no se encuentra directamente en tablas de antitransformadas
+            porque tiene dos factores en el denominador. Aplicamos el Teorema de Descomposición en Fracciones Simples:
+        </p>
+
+        $$\frac{\lambda_0}{s(s + \alpha)} = \frac{A}{s} + \frac{B}{s + \alpha}$$
+
+        <div class="step-box">
+            <h3>Eliminación de denominadores:</h3>
+            <p>Multiplicamos toda la ecuación por el mínimo común múltiplo de los denominadores, que es $s(s + \alpha)$:
+            </p>
+            $$s(s + \alpha) \cdot \left[ \frac{\lambda_0}{s(s + \alpha)} \right] = s(s + \alpha) \cdot \left[
+            \frac{A}{s} \right] + s(s + \alpha) \cdot \left[ \frac{B}{s + \alpha} \right]$$
+
+            <p><strong>Cancelaciones exactas:</strong></p>
+            <ul>
+                <li>Lado izquierdo: Los factores $s(s+\alpha)$ arriba y abajo se cancelan exactamente:
+                    $\frac{s(s+\alpha)}{s(s+\alpha)} = 1$. Queda únicamente $\lambda_0$.</li>
+                <li>Primer término derecho: El término $s$ arriba cancela el $s$ de abajo: $\frac{s}{s} = 1$. Queda $A(s
+                    + \alpha)$.</li>
+                <li>Segundo término derecho: El binomio $(s+\alpha)$ arriba cancela el $(s+\alpha)$ de abajo:
+                    $\frac{s+\alpha}{s+\alpha} = 1$. Queda $B(s)$.</li>
+            </ul>
+
+            <p>Obtenemos la ecuación algebraica básica:</p>
+            <div class="formula-display">
+                $$\lambda_0 = A(s + \alpha) + B s$$
+            </div>
+        </div>
+
+        <h3>Cálculo de las Constantes $A$ y $B$:</h3>
+
+        <p><strong>Método de Heaviside (Evaluación en los Polos / Raíces):</strong></p>
+        <ul>
+            <li>Para anular el término de $B$, evaluamos en la raíz $s = 0$:
+                $$\lambda_0 = A(0 + \alpha) + B(0)$$
+                $$\lambda_0 = A\alpha \implies A = \frac{\lambda_0}{\alpha}$$
+            </li>
+            <li>Para anular el término de $A$, evaluamos en la raíz $s = -\alpha$:
+                $$\lambda_0 = A(-\alpha + \alpha) + B(-\alpha)$$
+                $$\lambda_0 = A(0) - B\alpha \implies \lambda_0 = -B\alpha \implies B = -\frac{\lambda_0}{\alpha}$$
+            </li>
+        </ul>
+
+        <p>Reconstruimos la función $Q(s)$ con los valores obtenidos:</p>
+        $$Q(s) = \frac{\frac{\lambda_0}{\alpha}}{s} + \frac{-\frac{\lambda_0}{\alpha}}{s + \alpha}$$
+
+        <p>Sacamos la constante $\frac{\lambda_0}{\alpha}$ como factor común global:</p>
+        <div class="formula-display">
+            $$Q(s) = \frac{\lambda_0}{\alpha} \left[ \frac{1}{s} - \frac{1}{s + \alpha} \right]$$
+        </div>
+
+        <!-- SECCIÓN 5 -->
+        <h2>5. Transformada Inversa de Laplace ($\mathcal{L}^{-1}$)</h2>
+        <p>Aplicamos el operador lineal inverso $\mathcal{L}^{-1}\{\cdot\}$ término a término:</p>
+
+        $$q(t) = \mathcal{L}^{-1}\{Q(s)\} = \frac{\lambda_0}{\alpha} \left[ \mathcal{L}^{-1}\left\{\frac{1}{s}\right\} -
+        \mathcal{L}^{-1}\left\{\frac{1}{s + \alpha}\right\} \right]$$
+
+        <p>Aplicando las transformadas directas de tabla:</p>
+        <ul>
+            <li>$\mathcal{L}^{-1}\left\{\frac{1}{s}\right\} = 1 = u(t)$ (Respuesta forzada constante provocada por la
+                entrada continua).</li>
+            <li>$\mathcal{L}^{-1}\left\{\frac{1}{s + \alpha}\right\} = e^{-\alpha t}$ (Respuesta natural transitoria del
+                servidor).</li>
+        </ul>
+
+        <p>Por lo tanto, la solución temporal exacta $q(t)$ para $t \ge 0$ es:</p>
+        <div class="formula-display">
+            $$q(t) = \frac{\lambda_0}{\alpha} \left(1 - e^{-\alpha t}\right)$$
+        </div>
+
+        <p><strong>Evaluación con los datos reales del problema:</strong></p>
+        <ul>
+            <li>Tasa de llegada: $\lambda_0 = 500\text{ req/s}$</li>
+            <li>Tasa de servicio: $\alpha = 0.5\text{ s}^{-1}$</li>
+            <li>Amplitud de estado estacionario: $\frac{\lambda_0}{\alpha} = \frac{500}{0.5} = 1000\text{ req}$</li>
+            <li>Exponente temporal: $-\alpha t = -0.5 t$</li>
+        </ul>
+
+        <div class="formula-display">
+            $$q(t) = 1000 \cdot \left(1 - e^{-0.5t}\right) \quad [\text{req}]$$
+        </div>
+
+        <!-- SECCIÓN 6 -->
+        <h2>6. Modelo Dinámico del Consumo de Memoria RAM</h2>
+        <p>La memoria RAM total $M(t)$ consumida por el servidor es una función lineal afín:</p>
+
+        $$M(t) = M_{\text{base}} + m_r \cdot q(t)$$
+
+        <p>Donde:</p>
+        <ul>
+            <li>$M_{\text{base}} = 1024\text{ MB}$ ($1\text{ GB}$): Memoria estática que consumen el sistema operativo
+                Linux y el servidor web en reposo.</li>
+            <li>$m_r = 4.0\text{ MB/req}$: Memoria dinámica asignada a cada conexión TCP y renderizado de petición.</li>
+        </ul>
+
+        <p>Sustituyendo $q(t)$:</p>
+        $$M(t) = 1024 + 4.0 \cdot \left[ 1000 \cdot (1 - e^{-0.5t}) \right]$$
+        <div class="formula-display">
+            $$M(t) = 1024 + 4000 \cdot \left(1 - e^{-0.5t}\right) \quad [\text{MB}]$$
+        </div>
+
+        <!-- SECCIÓN 7 -->
+        <h2>7. Verificación Matemática Rigurosa</h2>
+
+        <div class="step-box">
+            <h3>Prueba 1: Comprobación por Sustitución Directa en la EDO</h3>
+            <p>Tomamos la solución analítica $q(t) = 1000 - 1000 e^{-0.5t}$ y calculamos su derivada por regla de la
+                cadena:</p>
+            $$\frac{dq}{dt} = \frac{d}{dt}[1000] - \frac{d}{dt}[1000 e^{-0.5t}] = 0 - 1000 \cdot (-0.5) e^{-0.5t} = 500
+            e^{-0.5t}$$
+
+            <p>Sustituimos $q(t)$ y $\frac{dq}{dt}$ en el miembro izquierdo de la ecuación original $\frac{dq}{dt} + 0.5
+                q(t)$:</p>
+            $$500 e^{-0.5t} + 0.5 \cdot \left(1000 - 1000 e^{-0.5t}\right)$$
+            $$= 500 e^{-0.5t} + 500 - 500 e^{-0.5t}$$
+
+            <p>Cancelamos los términos opuestos $500e^{-0.5t} - 500e^{-0.5t} = 0$:</p>
+            $$= 500 = \lambda_0 \quad \checkmark \text{ (Identidad demostrada)}$$
+        </div>
+
+        <div class="step-box">
+            <h3>Prueba 2: Teorema del Valor Inicial (TVI)</h3>
+            <p>Demuestra el valor en $t \to 0^+$ calculando el límite en el dominio de Laplace:</p>
+            $$q(0^+) = \lim_{s \to \infty} s Q(s) = \lim_{s \to \infty} s \cdot \left[ \frac{\lambda_0}{s(s + \alpha)}
+            \right]$$
+            <p>Cancelamos la variable $s$ del numerador con la $s$ del denominador:</p>
+            $$= \lim_{s \to \infty} \frac{\lambda_0}{s + \alpha} = \frac{500}{\infty + 0.5} = \frac{500}{\infty} =
+            0\text{ req} \quad \checkmark$$
+        </div>
+
+        <div class="step-box">
+            <h3>Prueba 3: Teorema del Valor Final (TVF)</h3>
+            <p>Demuestra el valor de estado estacionario asintótico ($t \to \infty$):</p>
+            $$q(\infty) = \lim_{s \to 0} s Q(s) = \lim_{s \to 0} s \cdot \left[ \frac{\lambda_0}{s(s + \alpha)} \right]
+            = \lim_{s \to 0} \frac{\lambda_0}{s + \alpha} = \frac{500}{0 + 0.5} = \frac{500}{0.5} = 1000\text{ req}
+            \quad \checkmark$$
+        </div>
+
+        <div class="step-box">
+            <h3>Prueba 4: Constante de Tiempo ($\tau$) y Tiempo de Estabilización al 98%</h3>
+            <p>En cualquier sistema lineal de primer orden de la forma $e^{-t/\tau}$:</p>
+            <ul>
+                <li>Constante de tiempo: $\tau = \frac{1}{\alpha} = \frac{1}{0.5} = 2.0\text{ segundos}$.</li>
+                <li>Criterio de estabilización formal ($4\tau$): $t_s = 4 \times \tau = 4 \times 2 = 8.0\text{
+                    segundos}$.</li>
+                <li>Evaluación en $t = 8\text{ s}$:
+                    $$q(8) = 1000 \cdot (1 - e^{-0.5 \times 8}) = 1000 \cdot (1 - e^{-4}) = 1000 \cdot (1 - 0.01831) =
+                    981.68\text{ req } (\mathbf{98.17\%})$$
+                </li>
+            </ul>
+        </div>
+
+        <!-- SECCIÓN 8 -->
+        <h2>8. Despeje Algebraico Exacto: Tiempo de Colapso con 4 GB de RAM</h2>
+        <p>Si la infraestructura cuenta con un servidor limitado de $4\text{ GB}$ ($M_{\text{máx}} = 4096\text{ MB}$),
+            ¿en cuántos segundos colapsará por Out-Of-Memory?</p>
+
+        <p>Igualamos la función de memoria a la capacidad límite:</p>
+        $$M(t) = 4096$$
+        $$1024 + 4000 \cdot (1 - e^{-0.5t}) = 4096$$
+
+        <div class="step-box">
+            <h3>Despeje paso a paso:</h3>
+            <ol>
+                <li>Restamos la memoria base $1024$ a ambos lados:
+                    $$4000 \cdot (1 - e^{-0.5t}) = 4096 - 1024$$
+                    $$4000 \cdot (1 - e^{-0.5t}) = 3072$$
+                </li>
+                <li>Dividimos entre $4000$:
+                    $$1 - e^{-0.5t} = \frac{3072}{4000} = 0.768$$
+                </li>
+                <li>Despejamos el término exponencial restando $1$:
+                    $$-e^{-0.5t} = 0.768 - 1 = -0.232$$
+                    $$e^{-0.5t} = 0.232$$
+                </li>
+                <li>Aplicamos logaritmo natural ($\ln$) a ambos lados de la igualdad para cancelar la base $e$
+                    ($\ln(e^u) = u$):
+                    $$\ln\left(e^{-0.5t}\right) = \ln(0.232)$$
+                    $$-0.5 t = -1.46102$$
+                </li>
+                <li>Dividimos entre $-0.5$ (los signos negativos se cancelan):
+                    $$t = \frac{-1.46102}{-0.5} \approx 2.922\text{ segundos}$$
+                </li>
+            </ol>
+        </div>
+
+        <!-- SECCIÓN 9 -->
+        <h2>9. Resumen Comparativo de Resultados</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica / Parámetro</th>
+                    <th>Fórmula Matemática</th>
+                    <th>Valor Numérico</th>
+                    <th>Unidades</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Polo del Sistema ($s_p$)</td>
+                    <td>$s + \alpha = 0 \implies s = -\alpha$</td>
+                    <td><strong>-0.5</strong></td>
+                    <td>$\text{s}^{-1}$ (Semiplano Izq. -> Estable)</td>
+                </tr>
+                <tr>
+                    <td>Longitud de Cola Máxima ($q_{\text{ss}}$)</td>
+                    <td>$\lim_{t \to \infty} q(t) = \frac{\lambda_0}{\alpha}$</td>
+                    <td><strong>1000</strong></td>
+                    <td>$\text{peticiones (req)}$</td>
+                </tr>
+                <tr>
+                    <td>Tiempo de Respuesta / Estabilización</td>
+                    <td>$t_s = 4\tau = \frac{4}{\alpha}$</td>
+                    <td><strong>8.00</strong></td>
+                    <td>$\text{segundos (s)}$</td>
+                </tr>
+                <tr>
+                    <td>Memoria RAM Pico Requerida ($M_{\text{peak}}$)</td>
+                    <td>$M_{\text{base}} + m_r \cdot q_{\text{ss}}$</td>
+                    <td><strong>5024</strong></td>
+                    <td>$\text{MB (4.91 GB)}$</td>
+                </tr>
+                <tr>
+                    <td>Capacidad de Servidor Asignado</td>
+                    <td>$M_{\text{máx}}$</td>
+                    <td><strong>8192</strong></td>
+                    <td>$\text{MB (8.00 GB)}$</td>
+                </tr>
+                <tr>
+                    <td><strong>Margen Libre de Seguridad</strong></td>
+                    <td>$M_{\text{máx}} - M_{\text{peak}}$</td>
+                    <td><strong>3168</strong></td>
+                    <td><strong>$\text{MB (3.09 GB libres / 38.7%)}$</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+
+</html>
