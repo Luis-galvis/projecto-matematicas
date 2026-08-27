@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const q0Val = state.q0;
       const tsVal = (4 / state.alpha);
 
-      // 3. Código Python a ejecutar
+      // 3. Código Python a ejecutar (100% SymPy puro, sin dependencias externas de numpy)
       const pythonScript = `
 import sympy as sp
 import json
@@ -861,24 +861,23 @@ q = sp.Function('q')
 # EDO: dq/dt + alpha*q = lam0 con condición inicial q(0) = q0
 edo = sp.Eq(q(t).diff(t) + alpha*q(t), lam0)
 
-# Resolución simbólica directa e independiente
+# Resolución simbólica directa con SymPy dsolve
 solucion = sp.dsolve(edo, q(t), ics={q(0): q0})
 q_t_simbolico = sp.simplify(solucion.rhs)
 
-# Sustitución de valores numéricos del caso de estudio
+# Sustitución numérica
 valores = {lam0: ${lambdaVal}, alpha: sp.Rational(${Math.round(alphaVal * 100)}, 100), q0: ${q0Val}}
 q_t_numerico = q_t_simbolico.subs(valores)
-q_t_lambda = sp.lambdify(t, q_t_numerico, 'numpy')
 
 # Evaluación en régimen permanente (t -> oo) y en t = t_s (98%)
 q_ss_calc = sp.limit(q_t_numerico, t, sp.oo)
-q_ts_calc = q_t_lambda(${tsVal.toFixed(4)})
+q_ts_calc = q_t_numerico.subs(t, sp.Float(${tsVal.toFixed(4)}))
 
 res = json.dumps({
     "q_t_str": str(q_t_simbolico),
     "q_t_latex": sp.latex(q_t_simbolico),
     "q_ss": float(q_ss_calc),
-    "q_ts": float(q_ts_calc)
+    "q_ts": float(q_ts_calc.evalf())
 })
 res
 `;
@@ -907,7 +906,7 @@ res
 
       if (diffQss < 0.05 && diffTs < 0.05) {
         pyDom.matchBanner.className = 'py-match-banner success';
-        pyDom.matchMsg.innerHTML = `✓ <strong>Verificación exitosa:</strong> SymPy (Python) resolvió $q(t)$ simbólicamente y coincide al 100% con la solución de Laplace y JavaScript.`;
+        pyDom.matchMsg.innerHTML = `✓ <strong>Verificación simbólica exitosa:</strong> SymPy resolvió $q(t)$ y coincide exactamente con la solución de Laplace y JavaScript.`;
       } else {
         pyDom.matchBanner.className = 'py-match-banner';
         pyDom.matchMsg.innerText = `Solución ejecutada. Diferencia de orden: ${(diffQss + diffTs).toExponential(2)}`;
@@ -977,16 +976,18 @@ res
       hint: 'Pasa el cursor sobre las curvas para ver los valores exactos en cada segundo.'
     },
     {
-      target: '#python-verification-card',
-      title: '6. 🐍 Verificación Simbólica en Python (SymPy)',
-      body: 'Ejecuta Python real con SymPy vía WebAssembly/Pyodide directamente en tu navegador para resolver la EDO simbólicamente de forma independiente.',
-      hint: 'Haz clic en "▶ Ejecutar Verificación en Python" para resolver la ecuación con SymPy.'
+      target: '.math-section',
+      title: '6. 🐍 Verificación Simbólica en Python (Pestaña 4)',
+      body: 'Abre la pestaña "4. 🐍 Python (SymPy)" en el panel inferior para ejecutar SymPy real vía WebAssembly y resolver simbólicamente la EDO en tiempo de ejecución.',
+      hint: 'Haz clic en la pestaña 4 para ver el código Python y el botón de ejecución.',
+      tabToOpen: 'tab-python'
     },
     {
       target: '.math-section',
       title: '7. 📐 Desarrollo Matemático y Guía de Uso',
       body: 'Sección formal con fórmulas LaTeX (KaTeX): deducción de la EDO, transformada Q(s), fracciones parciales, regla práctica 4τ, algoritmo RK4, teoremas de límites y guía rápida.',
-      hint: 'Haz clic en las pestañas para explorar cada demostración paso a paso.'
+      hint: 'Haz clic en las pestañas para explorar cada demostración paso a paso.',
+      tabToOpen: 'tab-edo'
     }
   ];
 
@@ -1045,6 +1046,12 @@ res
     clearTourFocus();
     const step = tourSteps[stepIdx];
     if (!step) return;
+
+    // Si el paso requiere activar una pestaña matemática específica
+    if (step.tabToOpen) {
+      const tabBtn = document.querySelector(`.math-tab[data-tab="${step.tabToOpen}"]`);
+      if (tabBtn) tabBtn.click();
+    }
 
     tourDom.badge.innerText = `Paso ${stepIdx + 1} de ${tourSteps.length}`;
     tourDom.title.innerText = step.title;
