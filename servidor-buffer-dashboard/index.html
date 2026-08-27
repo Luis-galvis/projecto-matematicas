@@ -475,12 +475,13 @@
             <!-- TAB 4: Python SymPy Verification (Pyodide WebAssembly) -->
             <div class="math-tab-content" id="tab-python">
               <div class="python-tab-card" id="python-verification-card">
+                
                 <div class="python-header">
                   <div class="python-title-row">
                     <div class="python-logo-badge">🐍</div>
                     <div>
-                      <h3 class="python-title">Resolución Simbólica en Python (SymPy vía WebAssembly)</h3>
-                      <p class="python-subtitle">Motor real de Python 3.12 ejecutado en el cliente con SymPy para resolver la EDO independientemente</p>
+                      <h3 class="python-title">Resolución Simbólica Independiente en Python (SymPy)</h3>
+                      <p class="python-subtitle">Verificación cruzada ejecutando el motor algebraico SymPy en WebAssembly dentro del navegador</p>
                     </div>
                   </div>
                   <div class="python-actions">
@@ -488,6 +489,37 @@
                     <button type="button" class="btn-run-python" id="btn-run-python">
                       <span class="icon">▶</span> Ejecutar Verificación en Python
                     </button>
+                  </div>
+                </div>
+
+                <!-- Explanation Banner: What is being done and why -->
+                <div class="py-explain-box">
+                  <h4>💡 ¿Qué hace exactamente este módulo de Python y cómo funciona?</h4>
+                  <div class="py-steps-grid">
+                    <div class="py-step-item">
+                      <span class="py-step-number">1</span>
+                      <div class="py-step-text">
+                        <strong>Plantea la EDO simbólica:</strong> Define las variables como símbolos matemáticos ($t, \alpha, \lambda_0, q_0$) y la ecuación $\frac{dq}{dt} + \alpha q = \lambda_0$.
+                      </div>
+                    </div>
+                    <div class="py-step-item">
+                      <span class="py-step-number">2</span>
+                      <div class="py-step-text">
+                        <strong>Resuelve con <code>dsolve()</code>:</strong> SymPy integra la ecuación diferencial de forma 100% algebraica e independiente a la solución de Laplace manual.
+                      </div>
+                    </div>
+                    <div class="py-step-item">
+                      <span class="py-step-number">3</span>
+                      <div class="py-step-text">
+                        <strong>Sustituye tus parámetros:</strong> Toma los valores actuales de los sliders ($\lambda_0, \alpha, q_0$) y evalúa la función en estado estacionario y en $t_s$.
+                      </div>
+                    </div>
+                    <div class="py-step-item">
+                      <span class="py-step-number">4</span>
+                      <div class="py-step-text">
+                        <strong>Compara y valida:</strong> Comprueba que la expresión de SymPy coincida al 100% con la fórmula de Laplace obtenida a mano y con el integrador RK4.
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -500,66 +532,74 @@
                 <!-- Results & Code Output Grid -->
                 <div class="python-grid">
                   
-                  <!-- Python Code Viewer -->
+                  <!-- Python Code Viewer with detailed comments -->
                   <div class="python-code-box">
                     <div class="py-box-header">
-                      <span>📄 Código Python Ejecutado (SymPy dsolve):</span>
-                      <button type="button" class="btn-copy-code" id="btn-copy-py" title="Copiar código Python">📋 Copiar</button>
+                      <span>📄 Código Python que se ejecuta en tu navegador:</span>
+                      <button type="button" class="btn-copy-code" id="btn-copy-py" title="Copiar código Python">📋 Copiar Código</button>
                     </div>
-                    <pre class="py-code-block"><code id="py-code-display">import sympy as sp
+                    <pre class="py-code-block"><code id="py-code-display"># ==========================================================
+# VERIFICACIÓN SIMBÓLICA CON SYMPY (Python 3.12 vía WebAssembly)
+# ==========================================================
+import sympy as sp
 
-# Símbolos y función
+# 1. Definir variables y símbolos matemáticos
 t, alpha, lam0, q0 = sp.symbols('t alpha lambda0 q0', positive=True)
 q = sp.Function('q')
 
-# EDO: dq/dt + alpha*q = lambda0, q(0) = q0
-edo = sp.Eq(q(t).diff(t) + alpha*q(t), lam0)
+# 2. Plantear la EDO: dq/dt + alpha*q(t) = lambda0
+edo = sp.Eq(q(t).diff(t) + alpha * q(t), lam0)
 
-# Solución simbólica directa con SymPy
+# 3. Resolver la EDO simbólicamente con condición inicial q(0) = q0
 solucion = sp.dsolve(edo, q(t), ics={q(0): q0})
 q_t = sp.simplify(solucion.rhs)
 
-# Evaluación de estado estacionario y tiempo al 98%
-q_ss = sp.limit(q_t, t, sp.oo)</code></pre>
+# 4. Sustituir valores numéricos activos del simulador
+valores = {lam0: 500, alpha: sp.Rational(1, 2), q0: 0}
+q_t_num = q_t.subs(valores)
+
+# 5. Calcular límite en infinito (q_ss) y evaluar en t = t_s (98%)
+q_ss_calc = sp.limit(q_t_num, t, sp.oo)
+q_ts_calc = q_t_num.subs(t, 8.0)</code></pre>
                   </div>
 
                   <!-- Python Verification Outputs -->
                   <div class="python-results-box">
                     <div class="py-box-header">
-                      <span>🔬 Resultados Simbólicos y Numéricos de SymPy:</span>
+                      <span>🔬 Resultados Devueltos por SymPy vs JavaScript:</span>
                       <span class="py-tag-badge" id="py-exec-time">-- ms</span>
                     </div>
 
                     <!-- Symbolic Formula Rendered -->
                     <div class="py-result-item">
-                      <div class="py-result-label">Solución Simbólica $q(t)$ calculada por SymPy:</div>
+                      <div class="py-result-label">1. Solución Simbólica General $q(t)$ que calculó SymPy:</div>
                       <div class="py-result-val-formula" id="py-formula-out">
-                        $$\text{Haz clic en "Ejecutar Verificación en Python" para resolver}$$
+                        $$\text{Haz clic en "▶ Ejecutar Verificación en Python" arriba para resolver}$$
                       </div>
                     </div>
 
                     <!-- Numerical Comparison Table -->
                     <div class="py-compare-grid">
                       <div class="py-metric-card">
-                        <span class="metric-title">Cola Estacionaria ($q_{ss}$)</span>
+                        <span class="metric-title">2. Cola Estacionaria ($q_{ss} = \lim_{t \to \infty} q(t)$)</span>
                         <div class="metric-row">
-                          <span>SymPy:</span>
+                          <span>Calculado por SymPy:</span>
                           <strong id="py-val-qss">--</strong>
                         </div>
                         <div class="metric-row">
-                          <span>Analítico (JS):</span>
+                          <span>Fórmula Laplace (JS):</span>
                           <strong id="js-val-qss">1,000 req</strong>
                         </div>
                       </div>
 
                       <div class="py-metric-card">
-                        <span class="metric-title">Valor en $t_s$ ($t=8.00\text{s}$)</span>
+                        <span class="metric-title">3. Valor en $t_s = 4/\alpha$ ($t=8.00\text{s}$)</span>
                         <div class="metric-row">
-                          <span>SymPy:</span>
+                          <span>Calculado por SymPy:</span>
                           <strong id="py-val-ts">--</strong>
                         </div>
                         <div class="metric-row">
-                          <span>Analítico (JS):</span>
+                          <span>Fórmula Laplace (JS):</span>
                           <strong id="js-val-ts">981.68 req</strong>
                         </div>
                       </div>
@@ -568,7 +608,7 @@ q_ss = sp.limit(q_t, t, sp.oo)</code></pre>
                     <!-- Match Status Alert -->
                     <div class="py-match-banner" id="py-match-banner">
                       <span class="banner-icon">ℹ️</span>
-                      <span id="py-match-msg">Haz clic en el botón superior para ejecutar SymPy y verificar la solución cruzada.</span>
+                      <span id="py-match-msg">Presiona el botón "▶ Ejecutar Verificación en Python" para ejecutar este código en vivo y comparar los resultados.</span>
                     </div>
 
                   </div>
